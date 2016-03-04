@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang='en-GB'>
+<head>
+  <meta charset='utf-8'>
+  <title>Braindance Group Admin</title>
+  <link rel="stylesheet" type="text/css" href="normalize.css">
+  <link rel="stylesheet" type="text/css" href="skeleton.css">
+  <style>
+  body {
+    padding: 1em;
+  }
+  </style>
+</head>
+
+<body>
+  <h1>Braindance Group</h1>
+  <h3><a href="https://soundcloud.com/groups/braindance">https://soundcloud.com/groups/braindance</a></h3>
+  <div id='container'></div>
+
+  <script id='template' type='text/ractive'>
+    <table class='tracks'>
+    <tr>
+      <th>Track name</th>
+      <th>Tags</th>
+      <th>Nr of Comments</th>
+      <th>Nr of Plays</th>
+      <th>Length</th>
+    </tr>
+
+    {{#each tracks}}
+      <tr>
+        <td><a href='{{x}}'>{{x}}</a></td>
+        <td>{{x}}</td>
+        <td>{{x}}</td>
+        <td>{{x}}</td>
+        <td>{{x}}</td>
+      </tr>
+    {{/each}}
+  </table>
+</script>
+
+
+  <script src='ractive.min.js'></script>
+
+  <script>
+    var ractive = new Ractive({
+      // The `el` option can be a node, an ID, or a CSS selector.
+      el: '#container',
+
+      // We could pass in a string, but for the sake of convenience
+      // we're passing the ID of the <script> tag above.
+      template: '#template',
+
+      // Here, we're passing in some initial data
+      data: { tracks: [ {x: 'wozrld'} ] }
+    });
+  </script>
+</body>
+</html>
