@@ -5,44 +5,90 @@
   <title>Braindance Group Admin</title>
   <link rel="stylesheet" type="text/css" href="normalize.css">
   <link rel="stylesheet" type="text/css" href="skeleton.css">
+
+  <!-- ugh -->
+  <link rel="stylesheet" type="text/css" href="css/sc-player-minimal.css">
+
   <style>
-  body {
-    padding: 1em;
-  }
+  body { padding: 1em; }
+  .sc-player { width: 300px; }
   </style>
+
 </head>
 
 <body>
   <h1>Braindance Group</h1>
-  <h3><a href="https://soundcloud.com/groups/braindance">https://soundcloud.com/groups/braindance</a></h3>
+  <h4><a href="https://soundcloud.com/groups/braindance">https://soundcloud.com/groups/braindance</a></h4>
   <div id='container'></div>
 
   <script id='template' type='text/ractive'>
-    <table class='tracks'>
-    <tr>
-      <th>Track name</th>
-      <th>Tags</th>
-      <th>Nr of Comments</th>
-      <th>Nr of Plays</th>
-      <th>Length</th>
-    </tr>
+    {{#status}}<div class='status'>status: {{status}}</div>{{/status}}
 
-    {{#each tracks}}
+    {{#partial user}}
+      <div class='user'>
+        <a href='{{user.permalink_url}}'><img src='{{user.avatar_url}}'/></a>
+        <h6 class='username'>{{user.username}}</h6>
+      </div>
+    {{/partial}}
+
+    {{#each users:user}}
+    {{>user}}
+    <table class='tracks'>
       <tr>
-        <td><a href='{{x}}'>{{x}}</a></td>
-        <td>{{x}}</td>
-        <td>{{x}}</td>
-        <td>{{x}}</td>
-        <td>{{x}}</td>
+        <th>Age (days)</th>
+        <th>⏯~ Track name</th>
+        <th>Duration</th>
+        <th>Tags</th>
+        <th>#Comments</th>
+        <th>#Downloads</th>
+        <th>#Plays</th>
+        <th>#Favoritings</th>
       </tr>
+
+      {{#each tracks}}
+        <tr>
+          <td>{{ daysSince(.created_at).toFixed(0) }}</td>
+          <td><a href='{{permalink_url}}' class='sc-player'>{{title}}</a></td>
+          <td>{{formatDuration(duration)}}</td>
+          <td>{{tag_list}}</td>
+          <td>{{comment_count}}</td>
+          <td>{{download_count}}</td>
+          <td>{{playback_count}}</td>
+          <td>{{favoritings_count}}</td>
+        </tr>
+      {{/each}}
+    </table>
     {{/each}}
-  </table>
 </script>
 
 
-  <script src='ractive.min.js'></script>
+  <script type="text/javascript" src='ractive.min.js'></script>
+  <script type="text/javascript" src='ramda.min.js'></script>
+  <script type="text/javascript" src="js/jquery.js"></script>
+  <script type="text/javascript" src="js/soundcloud.player.api.js"></script>
+  <script type="text/javascript" src="js/sc-player.js"></script>
 
   <script>
+
+    // disable soundcloud player injection
+    $.scPlayer.defaults.onDomReady = null
+
+    function formatDuration (durationMs) {
+      var duration = durationMs / 1000
+      var hours = ((duration) / 3600).toFixed(0)
+      var minutes = ((duration / 60) % 60).toFixed(0)
+      var seconds = (duration % 60).toFixed(0)
+      if (minutes < 10) { minutes = '0' + minutes }
+      if (seconds < 10) { seconds = '0' + seconds }
+      return hours + ':' + minutes + ':' + seconds
+    }
+
+    function daysSince (dateString) {
+      var d = new Date(dateString)
+      var e = new Date() // now
+      return (e - d) / (1000 * 60 * 60 * 24)
+    }
+
     var ractive = new Ractive({
       // The `el` option can be a node, an ID, or a CSS selector.
       el: '#container',
@@ -52,8 +98,48 @@
       template: '#template',
 
       // Here, we're passing in some initial data
-      data: { tracks: [ {x: 'wozrld'} ] }
+      data: {
+        tracks: [],
+        users: {},
+        formatDuration: formatDuration,
+        daysSince: daysSince
+      }
     });
+
+    ractive.set('status', 'loading tracks')
+    fetch('data.json').then(function (res) {
+      ractive.set('status', 'parsing')
+      console.log('fetchd')
+      res.json().then(function (tracks) {
+        ractive.set('tracks', tracks)
+        ractive.set('status', 'processing ' + tracks.length + ' tracks')
+
+        var grouped = R.pipe(
+          // group by user id
+          R.groupBy(R.path(['user', 'permalink'])),
+          // create a 'toplevel' user object, by picking it from the tracks
+          R.map(function (user_tracks) {
+            return {
+              tracks: user_tracks,
+              user: R.head(user_tracks).user
+            }
+          })
+        )(tracks)
+
+        ractive.set('status', 'grouped ' + R.keys(grouped).length + ' users')
+        ractive.set('users', grouped).then(function () {
+          // succesfully updated the interface
+          // install the soundcloud player
+          $('a.sc-player').scPlayer();
+        })
+
+        setTimeout(function () {
+          ractive.set('status', null)
+        }, 2500)
+      })
+    })
+
+
   </script>
 </body>
 </html>
