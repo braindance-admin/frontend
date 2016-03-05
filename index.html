@@ -117,35 +117,20 @@
     });
 
     ractive.set('status', 'loading tracks')
-    fetch('data.json').then(function (res) {
+    fetch('/grouped-by-user').then(function (res) {
       ractive.set('status', 'parsing')
-      console.log('fetchd')
-      res.json().then(function (tracks) {
-        ractive.set('tracks', tracks)
-        ractive.set('status', 'processing ' + tracks.length + ' tracks')
-
-        var grouped = R.pipe(
-          // group by user id
-          R.groupBy(R.path(['user', 'permalink'])),
-          // create a 'toplevel' user object, by picking it from the tracks
-          R.map(function (user_tracks) {
-            return {
-              tracks: user_tracks,
-              user: R.head(user_tracks).user
-            }
-          })
-        )(tracks)
-
-        ractive.set('status', 'grouped ' + R.keys(grouped).length + ' users')
-        ractive.set('users', grouped).then(function () {
+      res.json().then(function (by_user) {
+        ractive.set('status', 'parsed ' + R.keys(by_user).length + ' users\' tracks')
+        ractive.set('users', by_user).then(function () {
           // succesfully updated the interface
           // install the soundcloud player
-          $('a.sc-player').scPlayer();
-        })
+          $('a.sc-player').scPlayer()
 
-        setTimeout(function () {
-          ractive.set('status', null)
-        }, 2500)
+          // clear the status
+          setTimeout(function () {
+            ractive.set('status', null)
+          }, 2500)
+        })
       })
     })
 
